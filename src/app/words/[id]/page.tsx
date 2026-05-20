@@ -1,7 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { getAdminHeaders } from '@/lib/admin-client';
+
+interface ReviewHistory {
+  id: number;
+  word_id: number;
+  review_date: string;
+  result: boolean;
+  next_review_date: string;
+  interval: number;
+  ease_factor: number;
+  repetitions: number;
+}
 
 interface Word {
   id: number;
@@ -12,7 +24,7 @@ interface Word {
   tags: string | null;
   status: string;
   created_at: string;
-  reviews: any[];
+  reviews: ReviewHistory[];
 }
 
 export default function WordDetailPage() {
@@ -30,13 +42,11 @@ export default function WordDetailPage() {
     status: '',
   });
 
-  useEffect(() => {
-    fetchWord();
-  }, [params.id]);
+  const wordId = params.id;
 
-  async function fetchWord() {
+  const fetchWord = useCallback(async () => {
     try {
-      const res = await fetch(`/api/words/${params.id}`);
+      const res = await fetch(`/api/words/${wordId}`, { headers: getAdminHeaders() });
       const data = await res.json();
       if (data.success) {
         setWord(data.data);
@@ -54,7 +64,11 @@ export default function WordDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [wordId]);
+
+  useEffect(() => {
+    fetchWord();
+  }, [fetchWord]);
 
   async function handleSave() {
     try {
@@ -62,9 +76,9 @@ export default function WordDetailPage() {
         ? form.tags.split(',').map(t => t.trim()).filter(Boolean)
         : [];
 
-      const res = await fetch(`/api/words/${params.id}`, {
+      const res = await fetch(`/api/words/${wordId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           ...form,
           tags,
@@ -88,8 +102,9 @@ export default function WordDetailPage() {
     if (!confirm('确定要删除这个单词吗？')) return;
 
     try {
-      const res = await fetch(`/api/words/${params.id}`, {
+      const res = await fetch(`/api/words/${wordId}`, {
         method: 'DELETE',
+        headers: getAdminHeaders(),
       });
 
       const data = await res.json();
@@ -270,7 +285,7 @@ export default function WordDetailPage() {
         <div className="bg-white rounded-xl p-6 shadow-sm border">
           <h2 className="text-lg font-semibold mb-4">复习历史</h2>
           <div className="space-y-3">
-            {word.reviews.map((review: any, index: number) => (
+            {word.reviews.map((review, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
                   <span className={`font-medium ${review.result ? 'text-green-600' : 'text-red-600'}`}>

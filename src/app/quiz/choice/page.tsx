@@ -3,15 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
+import { getAdminHeaders } from '@/lib/admin-client';
 
 interface Word {
   id: number;
   word: string;
   meaning: string;
+  status: string;
 }
 
 export default function ChoiceQuizPage() {
   const router = useRouter();
+  const [allWords, setAllWords] = useState<Word[]>([]);
   const [words, setWords] = useState<Word[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [options, setOptions] = useState<string[]>([]);
@@ -21,44 +24,48 @@ export default function ChoiceQuizPage() {
   const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
+    async function fetchWords() {
+      try {
+        const res = await fetch('/api/words?limit=100', { headers: getAdminHeaders() });
+        const data = await res.json();
+        if (data.success) {
+          const fetchedWords = data.data.words as Word[];
+          const learningWords = fetchedWords.filter((word) => word.status === 'learning');
+          const quizWords = learningWords.length > 0 ? learningWords : fetchedWords;
+
+          setAllWords(fetchedWords);
+          setWords(quizWords);
+          if (quizWords.length === 0) {
+            setCompleted(true);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch words:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     fetchWords();
   }, []);
 
   useEffect(() => {
-    if (words.length > 0 && currentIndex < words.length) {
-      generateOptions();
+    if (words.length === 0 || currentIndex >= words.length) {
+      return;
     }
-  }, [currentIndex, words]);
 
-  async function fetchWords() {
-    try {
-      const res = await fetch('/api/words?limit=20&status=learning');
-      const data = await res.json();
-      if (data.success) {
-        setWords(data.data.words);
-        if (data.data.words.length === 0) {
-          setCompleted(true);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch words:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function generateOptions() {
     const currentWord = words[currentIndex];
-    const otherWords = words.filter((_, i) => i !== currentIndex);
+    const otherWords = allWords.filter((word) => word.id !== currentWord.id);
     const wrongOptions = otherWords
       .sort(() => Math.random() - 0.5)
       .slice(0, 3)
       .map(w => w.meaning);
 
-    const allOptions = [...wrongOptions, currentWord.meaning].sort(() => Math.random() - 0.5);
+    const allOptions = [...new Set([...wrongOptions, currentWord.meaning])]
+      .sort(() => Math.random() - 0.5);
     setOptions(allOptions);
     setSelected(null);
-  }
+  }, [allWords, currentIndex, words]);
 
   function handleSelect(option: string) {
     if (selected) return; // 已选择
@@ -113,7 +120,6 @@ export default function ChoiceQuizPage() {
               setCurrentIndex(0);
               setCorrect(0);
               setCompleted(false);
-              generateOptions();
             }}
             className="px-6 py-3 border rounded-lg font-semibold hover:bg-gray-50"
           >

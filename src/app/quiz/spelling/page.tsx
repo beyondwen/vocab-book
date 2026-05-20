@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getAdminHeaders } from '@/lib/admin-client';
 
 interface Word {
   id: number;
@@ -22,6 +23,23 @@ export default function SpellingQuizPage() {
   const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
+    async function fetchWords() {
+      try {
+        const res = await fetch('/api/words?limit=20&status=learning', { headers: getAdminHeaders() });
+        const data = await res.json();
+        if (data.success) {
+          setWords(data.data.words);
+          if (data.data.words.length === 0) {
+            setCompleted(true);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch words:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     fetchWords();
   }, []);
 
@@ -30,23 +48,6 @@ export default function SpellingQuizPage() {
       inputRef.current.focus();
     }
   }, [currentIndex]);
-
-  async function fetchWords() {
-    try {
-      const res = await fetch('/api/words?limit=20&status=learning');
-      const data = await res.json();
-      if (data.success) {
-        setWords(data.data.words);
-        if (data.data.words.length === 0) {
-          setCompleted(true);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch words:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

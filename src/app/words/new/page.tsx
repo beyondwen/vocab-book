@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getAdminHeaders } from '@/lib/admin-client';
 
 export default function NewWordPage() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function NewWordPage() {
 
       const res = await fetch('/api/words', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           ...form,
           tags,

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db, { Word } from '@/lib/db';
+import { dbAll, dbGet, dbRun, SqlParam, Word } from '@/lib/db';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET /api/words - 查询单词列表
 export async function GET(request: NextRequest) {
   try {
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -12,7 +16,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
 
     let query = 'SELECT * FROM words WHERE 1=1';
-    const params: any[] = [];
+    const params: SqlParam[] = [];
 
     if (status) {
       query += ' AND status = ?';
@@ -31,13 +35,13 @@ export async function GET(request: NextRequest) {
 
     // 获取总数
     const countQuery = query.replace('SELECT *', 'SELECT COUNT(*) as total');
-    const { total } = db.prepare(countQuery).get(...params) as any;
+    const { total } = await dbGet<{ total: number }>(countQuery, params) || { total: 0 };
 
     // 分页查询
     query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, (page - 1) * limit);
 
-    const words = db.prepare(query).all(...params) as Word[];
+    const words = await dbAll<Word>(query, params);
 
     return NextResponse.json({
       success: true,
@@ -63,6 +67,9 @@ export async function GET(request: NextRequest) {
 // POST /api/words - 添加单词
 export async function POST(request: NextRequest) {
   try {
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
+
     const body = await request.json();
     const { word, phonetic, meaning, example, tags, wordbook_id } = body;
 
@@ -75,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 检查是否已存在
-    const existing = db.prepare('SELECT id FROM words WHERE word = ?').get(word);
+    const existing = await dbGet<{ id: number }>('SELECT id FROM words WHERE word = ?', [word]);
     if (existing) {
       return NextResponse.json(
         { success: false, error: { code: 'DUPLICATE_WORD', message: '单词已存在' } },
@@ -85,16 +92,17 @@ export async function POST(request: NextRequest) {
 
     // 插入新单词
     const tagsJson = tags ? JSON.stringify(tags) : null;
-    const result = db.prepare(
-      'INSERT INTO words (word, phonetic, meaning, example, tags, wordbook_id) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(word, phonetic || null, meaning, example || null, tagsJson, wordbook_id || null);
+    const result = await dbRun(
+      'INSERT INTO words (word, phonetic, meaning, example, tags, wordbook_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [word, phonetic || null, meaning, example || null, tagsJson, wordbook_id || null]
+    );
 
     // 更新单词本计数
     if (wordbook_id) {
-      db.prepare('UPDATE wordbooks SET word_count = word_count + 1 WHERE id = ?').run(wordbook_id);
+      await dbRun('UPDATE wordbooks SET word_count = word_count + 1 WHERE id = ?', [wordbook_id]);
     }
 
-    const newWord = db.prepare('SELECT * FROM words WHERE id = ?').get(result.lastInsertRowid);
+    const newWord = await dbGet<Word>('SELECT * FROM words WHERE id = ?', [result.lastInsertRowid || null]);
 
     return NextResponse.json({ success: true, data: newWord }, { status: 201 });
   } catch (error) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { getAdminHeaders } from '@/lib/admin-client';
 
 interface Stats {
   overview: {
@@ -25,33 +26,31 @@ export default function Home() {
   const [reviewCount, setReviewCount] = useState(0);
 
   useEffect(() => {
-    fetchStats();
-    fetchReviewCount();
+    async function fetchHomeData() {
+      try {
+        const [statsRes, reviewRes] = await Promise.all([
+          fetch('/api/stats', { headers: getAdminHeaders() }),
+          fetch('/api/review', { headers: getAdminHeaders() }),
+        ]);
+        const [statsData, reviewData] = await Promise.all([
+          statsRes.json(),
+          reviewRes.json(),
+        ]);
+
+        if (statsData.success) {
+          setStats(statsData.data);
+        }
+
+        if (reviewData.success) {
+          setReviewCount(reviewData.data.count);
+        }
+      } catch (error) {
+        console.error('Failed to fetch home data:', error);
+      }
+    }
+
+    fetchHomeData();
   }, []);
-
-  async function fetchStats() {
-    try {
-      const res = await fetch('/api/stats');
-      const data = await res.json();
-      if (data.success) {
-        setStats(data.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-    }
-  }
-
-  async function fetchReviewCount() {
-    try {
-      const res = await fetch('/api/review');
-      const data = await res.json();
-      if (data.success) {
-        setReviewCount(data.data.count);
-      }
-    } catch (error) {
-      console.error('Failed to fetch review count:', error);
-    }
-  }
 
   return (
     <div className="space-y-8">

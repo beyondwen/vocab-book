@@ -6,6 +6,7 @@
 export interface SM2Result {
   interval: number;      // 下次复习间隔（天）
   easeFactor: number;    // 难度因子
+  repetitions: number;   // 连续成功复习次数
   nextReviewDate: Date;  // 下次复习日期
 }
 
@@ -53,6 +54,7 @@ export function calculateSM2(
   return {
     interval: newInterval,
     easeFactor: newEaseFactor,
+    repetitions: newRepetitions,
     nextReviewDate,
   };
 }
@@ -61,8 +63,27 @@ export function calculateSM2(
  * 获取今日待复习单词
  */
 export function getTodayReviewDate(): string {
-  const now = new Date();
-  return now.toISOString().split('T')[0];
+  return formatDateInTimeZone(new Date());
+}
+
+export function formatDateInTimeZone(date: Date, timeZone = 'Asia/Shanghai'): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+export function getDayRange(dateString: string, timeZoneOffsetHours = 8) {
+  const utcMillis = Date.parse(`${dateString}T00:00:00.000Z`) - timeZoneOffsetHours * 60 * 60 * 1000;
+  const start = new Date(utcMillis);
+  const end = new Date(utcMillis + 24 * 60 * 60 * 1000);
+
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+  };
 }
 
 /**

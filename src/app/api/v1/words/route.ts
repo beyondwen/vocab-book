@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db, { Word } from '@/lib/db';
-import crypto from 'crypto';
+import { ApiKey, dbAll, dbGet, dbRun, SqlParam } from '@/lib/db';
+import { sha256Hex } from '@/lib/crypto';
 
 // API Key 验证中间件
 async function validateApiKey(request: NextRequest) {
@@ -20,16 +20,17 @@ async function validateApiKey(request: NextRequest) {
   }
 
   // 计算 key 的 hash
-  const keyHash = crypto.createHash('sha256').update(key).digest('hex');
+  const keyHash = await sha256Hex(key);
 
   // 查询数据库
-  const apiKeyRecord = db.prepare(
-    'SELECT * FROM api_keys WHERE key_hash = ? AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)'
-  ).get(keyHash) as any;
+  const apiKeyRecord = await dbGet<ApiKey>(
+    'SELECT * FROM api_keys WHERE key_hash = ? AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)',
+    [keyHash]
+  );
 
   if (apiKeyRecord) {
     // 更新最后使用时间
-    db.prepare('UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?').run(apiKeyRecord.id);
+    await dbRun('UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?', [apiKeyRecord.id]);
   }
 
   return apiKeyRecord;
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
 
     let query = 'SELECT id, word, phonetic, meaning, example, tags, status, created_at FROM words WHERE 1=1';
-    const params: any[] = [];
+    const params: SqlParam[] = [];
 
     if (search) {
       query += ' AND (word LIKE ? OR meaning LIKE ?)';
@@ -60,12 +61,12 @@ export async function GET(request: NextRequest) {
     }
 
     const countQuery = query.replace('SELECT id, word, phonetic, meaning, example, tags, status, created_at', 'SELECT COUNT(*) as total');
-    const { total } = db.prepare(countQuery).get(...params) as any;
+    const { total } = await dbGet<{ total: number }>(countQuery, params) || { total: 0 };
 
     query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, (page - 1) * limit);
 
-    const words = db.prepare(query).all(...params);
+    const words = await dbAll(query, params);
 
     return NextResponse.json({
       success: true,
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 检查重复
-    const existing = db.prepare('SELECT id FROM words WHERE word = ?').get(word);
+    const existing = await dbGet<{ id: number }>('SELECT id FROM words WHERE word = ?', [word]);
     if (existing) {
       return NextResponse.json(
         { success: false, error: { code: 'DUPLICATE_WORD', message: '单词已存在' } },
@@ -114,11 +115,15 @@ export async function POST(request: NextRequest) {
     }
 
     const tagsJson = tags ? JSON.stringify(tags) : null;
-    const result = db.prepare(
-      'INSERT INTO words (word, phonetic, meaning, example, tags) VALUES (?, ?, ?, ?, ?)'
-    ).run(word, phonetic || null, meaning, example || null, tagsJson);
+    const result = await dbRun(
+      'INSERT INTO words (word, phonetic, meaning, example, tags) VALUES (?, ?, ?, ?, ?)',
+      [word, phonetic || null, meaning, example || null, tagsJson]
+    );
 
-    const newWord = db.prepare('SELECT id, word, created_at FROM words WHERE id = ?').get(result.lastInsertRowid);
+    const newWord = await dbGet(
+      'SELECT id, word, created_at FROM words WHERE id = ?',
+      [result.lastInsertRowid || null]
+    );
 
     return NextResponse.json({ success: true, data: newWord }, { status: 201 });
   } catch (error) {

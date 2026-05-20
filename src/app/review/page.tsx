@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getAdminHeaders } from '@/lib/admin-client';
 
 interface Word {
   id: number;
@@ -20,25 +21,25 @@ export default function ReviewPage() {
   const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
+    async function fetchReviewWords() {
+      try {
+        const res = await fetch('/api/review', { headers: getAdminHeaders() });
+        const data = await res.json();
+        if (data.success) {
+          setWords(data.data.words);
+          if (data.data.words.length === 0) {
+            setCompleted(true);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch review words:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     fetchReviewWords();
   }, []);
-
-  async function fetchReviewWords() {
-    try {
-      const res = await fetch('/api/review');
-      const data = await res.json();
-      if (data.success) {
-        setWords(data.data.words);
-        if (data.data.words.length === 0) {
-          setCompleted(true);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch review words:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleReview(quality: number) {
     const word = words[currentIndex];
@@ -46,7 +47,7 @@ export default function ReviewPage() {
     try {
       await fetch('/api/review', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           word_id: word.id,
           quality,

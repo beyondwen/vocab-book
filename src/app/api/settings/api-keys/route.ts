@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db';
-import crypto from 'crypto';
+import { dbAll, dbGet, dbRun } from '@/lib/db';
+import { requireAdmin } from '@/lib/admin-auth';
+import { randomHex, sha256Hex } from '@/lib/crypto';
 
 // GET /api/settings/api-keys - 获取 API Key 列表
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const keys = db.prepare(
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
+
+    const keys = await dbAll(
       'SELECT id, name, last_used_at, created_at, expires_at FROM api_keys ORDER BY created_at DESC'
-    ).all();
+    );
 
     return NextResponse.json({ success: true, data: keys });
   } catch (error) {
@@ -22,11 +26,14 @@ export async function GET() {
 // POST /api/settings/api-keys - 创建 API Key
 export async function POST(request: NextRequest) {
   try {
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
+
     const body = await request.json();
     const { name, expires_in_days } = body;
 
     // 检查数量限制
-    const count = db.prepare('SELECT COUNT(*) as count FROM api_keys').get() as { count: number };
+    const count = await dbGet<{ count: number }>('SELECT COUNT(*) as count FROM api_keys') || { count: 0 };
     if (count.count >= 5) {
       return NextResponse.json(
         { success: false, error: { code: 'LIMIT_EXCEEDED', message: '最多创建5个 API Key' } },
@@ -35,8 +42,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 生成 API Key
-    const apiKey = `vb_${crypto.randomBytes(32).toString('hex')}`;
-    const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
+    const apiKey = `vb_${randomHex(32)}`;
+    const keyHash = await sha256Hex(apiKey);
 
     // 计算过期时间
     let expiresAt = null;
@@ -46,9 +53,10 @@ export async function POST(request: NextRequest) {
       expiresAt = date.toISOString();
     }
 
-    db.prepare(
-      'INSERT INTO api_keys (key_hash, name, expires_at) VALUES (?, ?, ?)'
-    ).run(keyHash, name || null, expiresAt);
+    await dbRun(
+      'INSERT INTO api_keys (key_hash, name, expires_at) VALUES (?, ?, ?)',
+      [keyHash, name || null, expiresAt]
+    );
 
     return NextResponse.json({
       success: true,
@@ -71,6 +79,9 @@ export async function POST(request: NextRequest) {
 // DELETE /api/settings/api-keys - 删除 API Key
 export async function DELETE(request: NextRequest) {
   try {
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -81,7 +92,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    db.prepare('DELETE FROM api_keys WHERE id = ?').run(id);
+    await dbRun('DELETE FROM api_keys WHERE id = ?', [id]);
 
     return NextResponse.json({ success: true, message: '删除成功' });
   } catch (error) {

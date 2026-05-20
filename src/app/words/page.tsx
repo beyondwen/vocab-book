@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { getAdminHeaders } from '@/lib/admin-client';
 
 interface Word {
   id: number;
@@ -21,11 +22,7 @@ export default function WordsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    fetchWords();
-  }, [page, statusFilter, search]);
-
-  async function fetchWords() {
+  const fetchWords = useCallback(async () => {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -34,7 +31,7 @@ export default function WordsPage() {
       if (statusFilter) params.set('status', statusFilter);
       if (search) params.set('search', search);
 
-      const res = await fetch(`/api/words?${params}`);
+      const res = await fetch(`/api/words?${params}`, { headers: getAdminHeaders() });
       const data = await res.json();
       if (data.success) {
         setWords(data.data.words);
@@ -43,13 +40,20 @@ export default function WordsPage() {
     } catch (error) {
       console.error('Failed to fetch words:', error);
     }
-  }
+  }, [page, search, statusFilter]);
+
+  useEffect(() => {
+    fetchWords();
+  }, [fetchWords]);
 
   async function deleteWord(id: number) {
     if (!confirm('确定要删除这个单词吗？')) return;
 
     try {
-      const res = await fetch(`/api/words/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/words/${id}`, {
+        method: 'DELETE',
+        headers: getAdminHeaders(),
+      });
       const data = await res.json();
       if (data.success) {
         fetchWords();

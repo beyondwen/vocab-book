@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db, { Word, ReviewRecord } from '@/lib/db';
+import { dbAll, dbGet, dbRun, Word, ReviewRecord } from '@/lib/db';
 import { calculateSM2, getTodayReviewDate } from '@/lib/sm2';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET /api/review - 获取今日待复习单词
 export async function GET(request: NextRequest) {
   try {
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
+
     const today = getTodayReviewDate();
 
     // 查询今日待复习的单词
-    const wordsToReview = db.prepare(`
+    const wordsToReview = await dbAll<Word>(`
       SELECT DISTINCT w.* 
       FROM words w
       LEFT JOIN review_records r ON w.id = r.word_id
       WHERE 
         w.status = 'new' 
-        OR (r.next_review_date <= ? AND r.id = (
+        OR (DATE(r.next_review_date) <= ? AND r.id = (
           SELECT id FROM review_records 
           WHERE word_id = w.id 
           ORDER BY review_date DESC 
@@ -24,7 +28,7 @@ export async function GET(request: NextRequest) {
         CASE WHEN w.status = 'new' THEN 0 ELSE 1 END,
         r.next_review_date ASC
       LIMIT 20
-    `).all(today) as Word[];
+    `, [today]);
 
     return NextResponse.json({
       success: true,
@@ -45,6 +49,9 @@ export async function GET(request: NextRequest) {
 // POST /api/review - 提交复习结果
 export async function POST(request: NextRequest) {
   try {
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
+
     const body = await request.json();
     const { word_id, quality } = body; // quality: 0-5
 
@@ -56,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取单词当前状态
-    const word = db.prepare('SELECT * FROM words WHERE id = ?').get(word_id) as Word | undefined;
+    const word = await dbGet<Word>('SELECT * FROM words WHERE id = ?', [word_id]);
     if (!word) {
       return NextResponse.json(
         { success: false, error: { code: 'WORD_NOT_FOUND', message: '单词不存在' } },
@@ -65,11 +72,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取上次复习记录
-    const lastReview = db.prepare(
-      'SELECT * FROM review_records WHERE word_id = ? ORDER BY review_date DESC LIMIT 1'
-    ).get(word_id) as ReviewRecord | undefined;
+    const lastReview = await dbGet<ReviewRecord>(
+      'SELECT * FROM review_records WHERE word_id = ? ORDER BY review_date DESC LIMIT 1',
+      [word_id]
+    );
 
-    const repetitions = lastReview ? (lastReview.result ? 1 : 0) : 0;
+    const repetitions = lastReview ? lastReview.repetitions : 0;
     const easeFactor = lastReview ? lastReview.ease_factor : 2.5;
     const interval = lastReview ? lastReview.interval : 1;
 
@@ -77,16 +85,18 @@ export async function POST(request: NextRequest) {
     const result = calculateSM2(quality, repetitions, easeFactor, interval);
 
     // 插入复习记录
-    db.prepare(
-      `INSERT INTO review_records (word_id, review_date, result, next_review_date, interval, ease_factor) 
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(
-      word_id,
-      new Date().toISOString(),
-      quality >= 3 ? 1 : 0,
-      result.nextReviewDate.toISOString(),
-      result.interval,
-      result.easeFactor
+    await dbRun(
+      `INSERT INTO review_records (word_id, review_date, result, next_review_date, interval, ease_factor, repetitions)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        word_id,
+        new Date().toISOString(),
+        quality >= 3 ? 1 : 0,
+        result.nextReviewDate.toISOString(),
+        result.interval,
+        result.easeFactor,
+        result.repetitions,
+      ]
     );
 
     // 更新单词状态
@@ -103,7 +113,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    db.prepare('UPDATE words SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(newStatus, word_id);
+    await dbRun('UPDATE words SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newStatus, word_id]);
 
     return NextResponse.json({
       success: true,

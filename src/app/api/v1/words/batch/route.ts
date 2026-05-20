@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db';
-import crypto from 'crypto';
+import { ApiKey, dbGet, dbRun } from '@/lib/db';
+import { sha256Hex } from '@/lib/crypto';
+
+interface BatchWord {
+  word?: string;
+  phonetic?: string | null;
+  meaning?: string;
+  example?: string | null;
+  tags?: string[];
+}
 
 // API Key 验证
 async function validateApiKey(request: NextRequest) {
@@ -16,13 +24,14 @@ async function validateApiKey(request: NextRequest) {
 
   if (!key) return null;
 
-  const keyHash = crypto.createHash('sha256').update(key).digest('hex');
-  const record = db.prepare(
-    'SELECT * FROM api_keys WHERE key_hash = ? AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)'
-  ).get(keyHash) as any;
+  const keyHash = await sha256Hex(key);
+  const record = await dbGet<ApiKey>(
+    'SELECT * FROM api_keys WHERE key_hash = ? AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)',
+    [keyHash]
+  );
 
   if (record) {
-    db.prepare('UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?').run(record.id);
+    await dbRun('UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?', [record.id]);
   }
 
   return record;
@@ -63,39 +72,33 @@ export async function POST(request: NextRequest) {
       errors: [] as string[],
     };
 
-    const insertStmt = db.prepare(
-      'INSERT INTO words (word, phonetic, meaning, example, tags) VALUES (?, ?, ?, ?, ?)'
-    );
-    const checkDuplicate = db.prepare('SELECT id FROM words WHERE word = ?');
+    for (const item of words as BatchWord[]) {
+      try {
+        const { word, phonetic, meaning, example, tags } = item;
 
-    const insertMany = db.transaction((items: any[]) => {
-      for (const item of items) {
-        try {
-          const { word, phonetic, meaning, example, tags } = item;
-
-          if (!word || !meaning) {
-            results.failed++;
-            results.errors.push(`缺少必填字段: ${word || '未知'}`);
-            continue;
-          }
-
-          const existing = checkDuplicate.get(word);
-          if (existing) {
-            results.duplicates++;
-            continue;
-          }
-
-          const tagsJson = tags ? JSON.stringify(tags) : null;
-          insertStmt.run(word, phonetic || null, meaning, example || null, tagsJson);
-          results.success++;
-        } catch {
+        if (!word || !meaning) {
           results.failed++;
-          results.errors.push(`导入失败: ${item.word || '未知'}`);
+          results.errors.push(`缺少必填字段: ${word || '未知'}`);
+          continue;
         }
-      }
-    });
 
-    insertMany(words);
+        const existing = await dbGet<{ id: number }>('SELECT id FROM words WHERE word = ?', [word]);
+        if (existing) {
+          results.duplicates++;
+          continue;
+        }
+
+        const tagsJson = tags ? JSON.stringify(tags) : null;
+        await dbRun(
+          'INSERT INTO words (word, phonetic, meaning, example, tags) VALUES (?, ?, ?, ?, ?)',
+          [word, phonetic || null, meaning, example || null, tagsJson]
+        );
+        results.success++;
+      } catch {
+        results.failed++;
+        results.errors.push(`导入失败: ${item.word || '未知'}`);
+      }
+    }
 
     return NextResponse.json({ success: true, data: results });
   } catch (error) {

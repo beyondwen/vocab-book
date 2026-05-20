@@ -12,21 +12,51 @@
 
 ## 技术栈
 
-- **前端**: Next.js 14 (App Router) + Tailwind CSS
+- **前端**: Next.js 16 (App Router) + Tailwind CSS
 - **后端**: Next.js API Routes
-- **数据库**: SQLite (better-sqlite3)
-- **部署**: 支持 Vercel / Cloudflare Pages
+- **数据库**: Cloudflare D1
+- **部署**: Cloudflare Workers（OpenNext）
 
 ## 快速开始
 
 ```bash
 # 安装依赖
-npm install
+npm ci
 
 # 启动开发服务器
 npm run dev
 
 # 访问 http://localhost:3000
+```
+
+### 生产环境管理令牌
+
+生产环境必须配置 `VOCAB_BOOK_ADMIN_TOKEN`。内部管理接口会校验：
+
+```
+X-Admin-Token: your-admin-token
+# 或
+Authorization: Bearer your-admin-token
+```
+
+网页访问会先进入 `/login`，登录成功后服务端会写入 httpOnly Cookie。开发环境未配置该变量时，会自动跳过管理接口校验，方便本地个人使用；第三方 API 仍然使用 `vb_xxx` API Key。
+
+### Cloudflare 部署
+
+项目通过 OpenNext 部署到 Cloudflare Workers，并使用 D1 持久化数据。
+
+```bash
+# 创建 D1 数据库后，把 database_id 写入 wrangler.jsonc
+npx wrangler d1 create vocab-book-db
+
+# 应用远程 D1 迁移
+npm run db:migrate
+
+# 设置生产管理令牌
+npx wrangler secret put VOCAB_BOOK_ADMIN_TOKEN
+
+# 构建并部署
+npm run cf:deploy
 ```
 
 ## 项目结构
@@ -53,7 +83,7 @@ vocab-book/
 
 ### 认证
 
-使用 API Key 认证，通过 Header 传递：
+`/api/v1/*` 是第三方开放 API，使用 API Key 认证，通过 Header 传递：
 
 ```
 Authorization: Bearer vb_xxx...
@@ -76,6 +106,8 @@ X-API-Key: vb_xxx...
 | POST | /api/import | 批量导入 |
 | POST | /api/v1/words | 第三方添加单词 |
 | POST | /api/v1/words/batch | 第三方批量添加 |
+
+内部页面使用的 `/api/words`、`/api/review`、`/api/stats`、`/api/import`、`/api/settings/api-keys` 在生产环境需要管理令牌。
 
 ## 许可证
 

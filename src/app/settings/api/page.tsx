@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getAdminHeaders } from '@/lib/admin-client';
 
 interface ApiKey {
   id: number;
@@ -9,6 +10,47 @@ interface ApiKey {
   created_at: string;
   expires_at: string | null;
 }
+
+const baseUrl = 'https://vocab-book.beyondlenovo.workers.dev';
+
+const endpoints = [
+  {
+    method: 'GET',
+    path: '/api/v1/words',
+    title: '查询单词',
+    description: '按分页读取单词，也可以用 search 搜索英文或释义。',
+    params: 'page、limit、search',
+  },
+  {
+    method: 'POST',
+    path: '/api/v1/words',
+    title: '添加单词',
+    description: '添加一个新单词。word 和 meaning 必填，其余字段可选。',
+    params: 'word、meaning、phonetic、example、tags',
+  },
+  {
+    method: 'POST',
+    path: '/api/v1/words/batch',
+    title: '批量添加',
+    description: '一次最多导入 100 个单词，重复项会跳过并计入 duplicates。',
+    params: 'words[]',
+  },
+];
+
+const fieldRows = [
+  ['word', 'string', '是', '英文单词或短语，例如 ephemeral'],
+  ['meaning', 'string', '是', '中文释义，例如 短暂的'],
+  ['phonetic', 'string', '否', '音标，例如 /ɪˈfemərəl/'],
+  ['example', 'string', '否', '例句，例如 Fame is ephemeral.'],
+  ['tags', 'string[]', '否', '标签数组，例如 ["GRE", "阅读"]'],
+];
+
+const errorRows = [
+  ['UNAUTHORIZED', 'API Key 缺失、错误或已过期'],
+  ['VALIDATION_ERROR', '请求体缺少必填字段，或批量数量超过 100'],
+  ['DUPLICATE_WORD', '添加的单词已经存在'],
+  ['INTERNAL_ERROR', '服务端处理失败'],
+];
 
 export default function ApiSettingsPage() {
   const [keys, setKeys] = useState<ApiKey[]>([]);
@@ -23,7 +65,7 @@ export default function ApiSettingsPage() {
 
   async function fetchKeys() {
     try {
-      const res = await fetch('/api/settings/api-keys');
+      const res = await fetch('/api/settings/api-keys', { headers: getAdminHeaders() });
       const data = await res.json();
       if (data.success) {
         setKeys(data.data);
@@ -40,7 +82,7 @@ export default function ApiSettingsPage() {
     try {
       const res = await fetch('/api/settings/api-keys', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ name: newKeyName || null }),
       });
 
@@ -66,6 +108,7 @@ export default function ApiSettingsPage() {
     try {
       const res = await fetch(`/api/settings/api-keys?id=${id}`, {
         method: 'DELETE',
+        headers: getAdminHeaders(),
       });
 
       const data = await res.json();
@@ -82,27 +125,70 @@ export default function ApiSettingsPage() {
     alert('已复制到剪贴板');
   }
 
+  const authExample = `Authorization: Bearer vb_xxx...
+X-API-Key: vb_xxx...`;
+  const createExample = `curl -X POST ${baseUrl}/api/v1/words \\
+  -H "Authorization: Bearer vb_xxx..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "word": "ephemeral",
+    "meaning": "短暂的",
+    "phonetic": "/ɪˈfemərəl/",
+    "example": "Fame is ephemeral.",
+    "tags": ["GRE", "阅读"]
+  }'`;
+  const queryExample = `curl "${baseUrl}/api/v1/words?page=1&limit=20&search=ephemeral" \\
+  -H "Authorization: Bearer vb_xxx..."`;
+  const batchExample = `curl -X POST ${baseUrl}/api/v1/words/batch \\
+  -H "Authorization: Bearer vb_xxx..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "words": [
+      { "word": "ubiquitous", "meaning": "无处不在的" },
+      { "word": "serendipity", "meaning": "意外发现的好运" }
+    ]
+  }'`;
+  const responseExample = `{
+  "success": true,
+  "data": {
+    "id": 1,
+    "word": "ephemeral",
+    "created_at": "2026-05-20 13:37:31"
+  }
+}`;
+
   if (loading) {
     return <div className="text-center text-gray-500">加载中...</div>;
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <h1 className="text-2xl font-bold">API Key 管理</h1>
-
-      {/* 说明 */}
-      <div className="bg-blue-50 rounded-xl p-4">
-        <h3 className="font-semibold text-blue-800 mb-2">使用说明</h3>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>• API Key 用于第三方应用调用</li>
-          <li>• 最多可创建 5 个 Key</li>
-          <li>• 请求时通过 Header 传递: <code className="bg-blue-100 px-1">Authorization: Bearer YOUR_KEY</code></li>
-        </ul>
-        <div className="mt-3 p-3 bg-white rounded text-sm font-mono text-gray-600">
-          POST /api/v1/words<br/>
-          Headers: Authorization: Bearer vb_xxx...<br/>
-          Body: {`{ "word": "hello", "meaning": "你好" }`}
+    <div className="max-w-5xl mx-auto space-y-8">
+      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">第三方 API</h1>
+          <p className="text-gray-500 mt-1">把外部工具、浏览器插件或自动化脚本接入这个单词本。</p>
         </div>
+        <div className="text-sm text-gray-500">
+          Base URL: <code className="px-2 py-1 bg-gray-100 rounded">{baseUrl}</code>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {endpoints.map((endpoint) => (
+          <div key={endpoint.path + endpoint.method} className="bg-white rounded-xl p-5 shadow-sm border">
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`px-2 py-1 rounded text-xs font-bold ${
+                endpoint.method === 'GET' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+              }`}>
+                {endpoint.method}
+              </span>
+              <code className="text-sm text-gray-700">{endpoint.path}</code>
+            </div>
+            <h2 className="font-semibold text-gray-900">{endpoint.title}</h2>
+            <p className="mt-2 text-sm text-gray-500 leading-6">{endpoint.description}</p>
+            <div className="mt-3 text-xs text-gray-400">参数：{endpoint.params}</div>
+          </div>
+        ))}
       </div>
 
       {/* 创建新 Key */}
@@ -128,6 +214,84 @@ export default function ApiSettingsPage() {
           <p className="mt-2 text-sm text-red-500">已达最大数量限制</p>
         )}
       </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+        <section className="bg-white rounded-xl p-6 shadow-sm border space-y-5">
+          <div>
+            <h2 className="text-lg font-semibold">认证方式</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              第三方 API 只接受 API Key，不使用网页登录 Cookie。两种 Header 写法任选其一。
+            </p>
+          </div>
+          <CodeBlock code={authExample} onCopy={copyToClipboard} />
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="p-3 rounded-lg bg-gray-50">
+              <div className="font-medium text-gray-900">Key 前缀</div>
+              <div className="text-gray-500 mt-1">vb_</div>
+            </div>
+            <div className="p-3 rounded-lg bg-gray-50">
+              <div className="font-medium text-gray-900">数量限制</div>
+              <div className="text-gray-500 mt-1">最多 5 个</div>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white rounded-xl p-6 shadow-sm border">
+          <h2 className="text-lg font-semibold mb-4">字段说明</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b">
+                  <th className="py-2 pr-4">字段</th>
+                  <th className="py-2 pr-4">类型</th>
+                  <th className="py-2 pr-4">必填</th>
+                  <th className="py-2">说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fieldRows.map(([field, type, required, description]) => (
+                  <tr key={field} className="border-b last:border-0">
+                    <td className="py-3 pr-4 font-mono text-gray-900">{field}</td>
+                    <td className="py-3 pr-4 text-gray-600">{type}</td>
+                    <td className="py-3 pr-4 text-gray-600">{required}</td>
+                    <td className="py-3 text-gray-500">{description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <section className="bg-white rounded-xl p-6 shadow-sm border space-y-5">
+        <h2 className="text-lg font-semibold">调用示例</h2>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <ExampleCard title="添加单词" code={createExample} onCopy={copyToClipboard} />
+          <ExampleCard title="查询单词" code={queryExample} onCopy={copyToClipboard} />
+          <ExampleCard title="批量添加" code={batchExample} onCopy={copyToClipboard} />
+          <ExampleCard title="成功响应" code={responseExample} onCopy={copyToClipboard} />
+        </div>
+      </section>
+
+      <section className="bg-white rounded-xl p-6 shadow-sm border">
+        <h2 className="text-lg font-semibold mb-4">返回格式与错误码</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="p-4 rounded-lg bg-gray-50">
+            <div className="font-medium text-gray-900 mb-2">统一返回</div>
+            <div className="text-sm text-gray-500 leading-6">
+              成功时返回 <code>success: true</code> 和 <code>data</code>；失败时返回 <code>success: false</code> 和 <code>error.code</code>、<code>error.message</code>。
+            </div>
+          </div>
+          <div className="space-y-2">
+            {errorRows.map(([code, message]) => (
+              <div key={code} className="flex gap-3 text-sm">
+                <code className="w-36 shrink-0 px-2 py-1 bg-red-50 text-red-700 rounded">{code}</code>
+                <span className="text-gray-500 py-1">{message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* 新创建的 Key */}
       {newKey && (
@@ -188,6 +352,59 @@ export default function ApiSettingsPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ExampleCard({
+  title,
+  code,
+  onCopy,
+}: {
+  title: string;
+  code: string;
+  onCopy: (text: string) => void;
+}) {
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b">
+        <h3 className="font-medium text-gray-900">{title}</h3>
+        <button
+          type="button"
+          onClick={() => onCopy(code)}
+          className="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded"
+        >
+          复制
+        </button>
+      </div>
+      <CodeBlock code={code} onCopy={onCopy} hideCopy />
+    </div>
+  );
+}
+
+function CodeBlock({
+  code,
+  onCopy,
+  hideCopy = false,
+}: {
+  code: string;
+  onCopy: (text: string) => void;
+  hideCopy?: boolean;
+}) {
+  return (
+    <div className="relative">
+      {!hideCopy && (
+        <button
+          type="button"
+          onClick={() => onCopy(code)}
+          className="absolute right-3 top-3 px-2 py-1 text-xs bg-white text-gray-600 border rounded hover:bg-gray-50"
+        >
+          复制
+        </button>
+      )}
+      <pre className="overflow-x-auto bg-gray-950 text-gray-100 text-sm leading-6 p-4 rounded-lg">
+        <code>{code}</code>
+      </pre>
     </div>
   );
 }

@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db, { Word } from '@/lib/db';
+import { dbAll, dbGet, dbRun, Word } from '@/lib/db';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET /api/words/[id] - 获取单词详情
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
 
-    const word = db.prepare('SELECT * FROM words WHERE id = ?').get(id) as Word | undefined;
+    const word = await dbGet<Word>('SELECT * FROM words WHERE id = ?', [id]);
 
     if (!word) {
       return NextResponse.json(
@@ -19,9 +22,10 @@ export async function GET(
     }
 
     // 获取复习记录
-    const reviews = db.prepare(
-      'SELECT * FROM review_records WHERE word_id = ? ORDER BY review_date DESC LIMIT 10'
-    ).all(id);
+    const reviews = await dbAll(
+      'SELECT * FROM review_records WHERE word_id = ? ORDER BY review_date DESC LIMIT 10',
+      [id]
+    );
 
     return NextResponse.json({
       success: true,
@@ -39,15 +43,18 @@ export async function GET(
 // PUT /api/words/[id] - 更新单词
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
+
     const body = await request.json();
     const { word, phonetic, meaning, example, tags, status, wordbook_id } = body;
 
     // 检查单词是否存在
-    const existing = db.prepare('SELECT * FROM words WHERE id = ?').get(id) as Word | undefined;
+    const existing = await dbGet<Word>('SELECT * FROM words WHERE id = ?', [id]);
     if (!existing) {
       return NextResponse.json(
         { success: false, error: { code: 'WORD_NOT_FOUND', message: '单词不存在' } },
@@ -57,7 +64,7 @@ export async function PUT(
 
     // 如果更新单词，检查是否重复
     if (word && word !== existing.word) {
-      const duplicate = db.prepare('SELECT id FROM words WHERE word = ? AND id != ?').get(word, id);
+      const duplicate = await dbGet<{ id: number }>('SELECT id FROM words WHERE word = ? AND id != ?', [word, id]);
       if (duplicate) {
         return NextResponse.json(
           { success: false, error: { code: 'DUPLICATE_WORD', message: '单词已存在' } },
@@ -68,7 +75,7 @@ export async function PUT(
 
     const tagsJson = tags ? JSON.stringify(tags) : existing.tags;
 
-    db.prepare(
+    await dbRun(
       `UPDATE words SET 
         word = COALESCE(?, word),
         phonetic = COALESCE(?, phonetic),
@@ -78,19 +85,20 @@ export async function PUT(
         status = COALESCE(?, status),
         wordbook_id = COALESCE(?, wordbook_id),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?`
-    ).run(
-      word || null,
-      phonetic !== undefined ? phonetic : null,
-      meaning || null,
-      example !== undefined ? example : null,
-      tagsJson,
-      status || null,
-      wordbook_id !== undefined ? wordbook_id : null,
-      id
+      WHERE id = ?`,
+      [
+        word || null,
+        phonetic !== undefined ? phonetic : null,
+        meaning || null,
+        example !== undefined ? example : null,
+        tagsJson,
+        status || null,
+        wordbook_id !== undefined ? wordbook_id : null,
+        id,
+      ]
     );
 
-    const updatedWord = db.prepare('SELECT * FROM words WHERE id = ?').get(id);
+    const updatedWord = await dbGet<Word>('SELECT * FROM words WHERE id = ?', [id]);
 
     return NextResponse.json({ success: true, data: updatedWord });
   } catch (error) {
@@ -105,13 +113,15 @@ export async function PUT(
 // DELETE /api/words/[id] - 删除单词
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
 
     // 检查单词是否存在
-    const existing = db.prepare('SELECT * FROM words WHERE id = ?').get(id) as Word | undefined;
+    const existing = await dbGet<Word>('SELECT * FROM words WHERE id = ?', [id]);
     if (!existing) {
       return NextResponse.json(
         { success: false, error: { code: 'WORD_NOT_FOUND', message: '单词不存在' } },
@@ -120,11 +130,11 @@ export async function DELETE(
     }
 
     // 删除单词（级联删除复习记录）
-    db.prepare('DELETE FROM words WHERE id = ?').run(id);
+    await dbRun('DELETE FROM words WHERE id = ?', [id]);
 
     // 更新单词本计数
     if (existing.wordbook_id) {
-      db.prepare('UPDATE wordbooks SET word_count = word_count - 1 WHERE id = ?').run(existing.wordbook_id);
+      await dbRun('UPDATE wordbooks SET word_count = word_count - 1 WHERE id = ?', [existing.wordbook_id]);
     }
 
     return NextResponse.json({ success: true, message: '删除成功' });

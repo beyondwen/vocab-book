@@ -2,13 +2,28 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getAdminHeaders } from '@/lib/admin-client';
+
+interface ImportWord {
+  word: string;
+  meaning: string;
+  phonetic: string | null;
+  example: string | null;
+}
+
+interface ImportResult {
+  success: number;
+  failed: number;
+  duplicates: number;
+  errors: string[];
+}
 
 export default function ImportPage() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<any[]>([]);
+  const [preview, setPreview] = useState<ImportWord[]>([]);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selectedFile = e.target.files?.[0];
@@ -27,7 +42,7 @@ export default function ImportPage() {
     reader.readAsText(selectedFile);
   }
 
-  function parseCSV(text: string): any[] {
+  function parseCSV(text: string): ImportWord[] {
     const lines = text.split('\n').filter(line => line.trim());
     const words = [];
 
@@ -60,7 +75,7 @@ export default function ImportPage() {
 
         const res = await fetch('/api/import', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAdminHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ words }),
         });
 

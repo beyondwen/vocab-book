@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 
 export default function QuizPage() {
@@ -17,7 +16,7 @@ export default function QuizPage() {
             <div className="text-4xl">🎯</div>
             <div>
               <h2 className="text-lg font-semibold">选择题</h2>
-              <p className="text-gray-500">看中文选英文，4选1</p>
+              <p className="text-gray-500">看英文选择正确释义</p>
             </div>
           </div>
         </Link>

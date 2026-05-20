@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getAdminHeaders } from '@/lib/admin-client';
 
 interface Stats {
   overview: {
@@ -26,22 +27,22 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/stats', { headers: getAdminHeaders() });
+        const data = await res.json();
+        if (data.success) {
+          setStats(data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     fetchStats();
   }, []);
-
-  async function fetchStats() {
-    try {
-      const res = await fetch('/api/stats');
-      const data = await res.json();
-      if (data.success) {
-        setStats(data.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -159,7 +160,7 @@ export default function StatsPage() {
           {Array.from({ length: 30 }, (_, i) => {
             const date = new Date();
             date.setDate(date.getDate() - 29 + i);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
             const record = stats.calendar.find(c => c.date === dateStr);
             const count = record?.count || 0;
 
