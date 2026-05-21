@@ -15,6 +15,8 @@ interface Word {
     id: number;
     body: string;
     format: 'plain' | 'markdown';
+    note: string | null;
+    note_format: 'plain' | 'markdown';
     source: string | null;
   }[];
 }
@@ -153,6 +155,16 @@ export default function ReviewPage() {
                   {currentWord.contents.map((content) => (
                     <div key={content.id} className="rounded-lg bg-gray-50 p-4">
                       <ContentBody body={content.body} format={content.format} className="text-sm leading-6 text-gray-700" />
+                      {content.note && (
+                        <div className="mt-3 border-t border-gray-200 pt-3">
+                          <div className="mb-2 text-xs font-semibold text-gray-500">分析</div>
+                          <ContentBody
+                            body={content.note}
+                            format={content.note_format || 'plain'}
+                            className="text-sm leading-6 text-gray-700"
+                          />
+                        </div>
+                      )}
                       {content.source && (
                         <div className="mt-2 text-xs text-gray-400">来源：{content.source}</div>
                       )}
