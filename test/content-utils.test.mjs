@@ -39,7 +39,7 @@ test('normalizeContentFormat supports plain and markdown', () => {
   assert.equal(normalizeContentFormat('markdown'), 'markdown');
   assert.equal(normalizeContentFormat(' plain '), 'plain');
   assert.equal(normalizeContentFormat(undefined), 'plain');
-  assert.equal(normalizeContentFormat('html'), 'plain');
+  assert.throws(() => normalizeContentFormat('html'), /内容格式只支持 plain 或 markdown/);
 });
 
 test('normalizeContentPayload prepares external API content payload', () => {
@@ -51,14 +51,34 @@ test('normalizeContentPayload prepares external API content payload', () => {
       tags: '阅读, 例句, 阅读',
       word_ids: [1, '2', 1],
       format: 'markdown',
+      note_format: 'markdown',
     }),
     {
       body: 'Fame is ephemeral.',
+      format: 'markdown',
       source: 'article',
       note: 'useful sentence',
+      noteFormat: 'markdown',
       tags: ['阅读', '例句'],
       wordIds: [1, 2],
-      format: 'markdown',
     },
+  );
+});
+
+test('normalizeContentPayload rejects unsupported content formats', () => {
+  assert.throws(
+    () => normalizeContentPayload({
+      body: 'Fame is ephemeral.',
+      format: 'html',
+    }),
+    /内容格式只支持 plain 或 markdown/,
+  );
+
+  assert.throws(
+    () => normalizeContentPayload({
+      body: 'Fame is ephemeral.',
+      note_format: 'richtext',
+    }),
+    /备注格式只支持 plain 或 markdown/,
   );
 });

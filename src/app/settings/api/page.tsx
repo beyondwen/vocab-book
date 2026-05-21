@@ -47,7 +47,7 @@ const endpoints = [
     path: '/api/v1/content',
     title: '添加内容',
     description: '添加一条句子或短内容，可选择纯文本或 Markdown，并关联已有单词。',
-    params: 'body、format、source、note、tags、word_ids',
+    params: 'body、format、source、note、note_format、tags、word_ids',
   },
   {
     method: 'POST',
@@ -78,6 +78,7 @@ const contentFieldRows = [
   ['format', '"plain" | "markdown"', '否', '正文格式，默认 plain；markdown 会安全渲染标题、列表、引用、表格和代码块'],
   ['source', 'string', '否', '来源，例如书名、文章、视频或网址'],
   ['note', 'string', '否', '备注，例如收藏原因或用法说明'],
+  ['note_format', '"plain" | "markdown"', '否', '备注格式，默认 plain；传错会返回 VALIDATION_ERROR'],
   ['tags', 'string[] 或 string', '否', '标签数组，或用逗号分隔的字符串'],
   ['word_ids', 'number[]', '否', '要关联的已有单词 ID 数组'],
 ];
@@ -189,10 +190,11 @@ X-API-Key: vb_xxx...`;
   -H "Authorization: Bearer vb_xxx..." \\
   -H "Content-Type: application/json" \\
   -d '{
-    "body": "## Fame is ephemeral.\\n\\n- ephemeral: 短暂的\\n- usable in writing",
+    "body": "Fame is ephemeral.",
     "format": "markdown",
     "source": "reading note",
-    "note": "用来记 ephemeral",
+    "note": "## 错误分析\\n\\n- ephemeral: 短暂的\\n- usable in writing",
+    "note_format": "markdown",
     "tags": ["阅读", "例句"],
     "word_ids": [1]
   }'`;
@@ -204,7 +206,7 @@ X-API-Key: vb_xxx...`;
   -d '{
     "contents": [
       { "body": "Fame is ephemeral.", "tags": ["阅读"] },
-      { "body": "### Serendipity\\n\\nOften rewards curiosity.", "format": "markdown", "source": "note" }
+      { "body": "Serendipity often rewards curiosity.", "note": "### 备注\\n\\n可以用于写作。", "note_format": "markdown", "source": "note" }
     ]
   }'`;
   const deleteContentExample = `curl -X DELETE ${baseUrl}/api/v1/content/1 \\

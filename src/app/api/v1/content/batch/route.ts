@@ -55,12 +55,13 @@ export async function POST(request: NextRequest) {
         }
 
         const result = await dbRun(
-          'INSERT INTO content_items (body, format, source, note, tags) VALUES (?, ?, ?, ?, ?)',
+          'INSERT INTO content_items (body, format, source, note, note_format, tags) VALUES (?, ?, ?, ?, ?, ?)',
           [
             payload.body,
             payload.format,
             payload.source,
             payload.note,
+            payload.noteFormat,
             payload.tags.length > 0 ? JSON.stringify(payload.tags) : null,
           ],
         );

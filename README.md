@@ -128,9 +128,10 @@ X-API-Key: vb_xxx...
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | body | string | 是 | 句子、段落或摘录正文 |
-| format | plain \| markdown | 否 | 正文格式，默认 `plain`；传 `markdown` 时会按 Markdown 安全渲染 |
+| format | plain \| markdown | 否 | 正文格式，默认 `plain`；只允许 `plain` 或 `markdown` |
 | source | string | 否 | 来源，例如书名、文章、视频或网址 |
 | note | string | 否 | 备注 |
+| note_format | plain \| markdown | 否 | 备注格式，默认 `plain`；只允许 `plain` 或 `markdown` |
 | tags | string[] 或 string | 否 | 标签数组，或逗号分隔字符串 |
 | word_ids | number[] | 否 | 要关联的已有单词 ID |
 
@@ -141,8 +142,10 @@ curl -X POST https://vocab-book.beyondlenovo.workers.dev/api/v1/content \
   -H "Authorization: Bearer vb_xxx..." \
   -H "Content-Type: application/json" \
   -d '{
-    "body": "## Fame is ephemeral.\n\n- ephemeral: 短暂的\n- usable in writing",
-    "format": "markdown",
+    "body": "Fame is ephemeral.",
+    "format": "plain",
+    "note": "## 错误分析\n\n- ephemeral: 短暂的\n- usable in writing",
+    "note_format": "markdown",
     "source": "reading note",
     "tags": ["阅读", "例句"],
     "word_ids": [1]

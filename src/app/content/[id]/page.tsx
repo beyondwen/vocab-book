@@ -20,6 +20,7 @@ interface ContentDetail {
   format: ContentFormat;
   source: string | null;
   note: string | null;
+  note_format: ContentFormat;
   tags: string | null;
   created_at: string;
   updated_at: string;
@@ -51,6 +52,7 @@ export default function ContentDetailPage() {
     format: 'plain' as ContentFormat,
     source: '',
     note: '',
+    note_format: 'markdown' as ContentFormat,
     tags: '',
   });
 
@@ -67,6 +69,7 @@ export default function ContentDetailPage() {
           format: data.data.format || 'plain',
           source: data.data.source || '',
           note: data.data.note || '',
+          note_format: data.data.note_format || 'plain',
           tags: tagsToInput(data.data.tags),
         });
       }
@@ -263,6 +266,25 @@ export default function ContentDetailPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">备注</label>
+                <div className="mb-2 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 text-sm">
+                  {[
+                    { value: 'plain' as ContentFormat, label: '纯文本' },
+                    { value: 'markdown' as ContentFormat, label: 'Markdown' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setForm({ ...form, note_format: option.value })}
+                      className={`rounded-md px-3 py-1.5 font-medium transition ${
+                        form.note_format === option.value
+                          ? 'bg-white text-indigo-700 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-800'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
                 <textarea
                   value={form.note}
                   onChange={(event) => setForm({ ...form, note: event.target.value })}
@@ -284,7 +306,13 @@ export default function ContentDetailPage() {
                 <span>创建：{new Date(content.created_at).toLocaleString('zh-CN')}</span>
               </div>
               {content.note && (
-                <div className="rounded-lg bg-gray-50 p-4 text-sm leading-6 text-gray-700">{content.note}</div>
+                <div className="rounded-lg bg-gray-50 p-4">
+                  <ContentBody
+                    body={content.note}
+                    format={content.note_format || 'plain'}
+                    className="text-sm leading-6 text-gray-700"
+                  />
+                </div>
               )}
               {tagsToInput(content.tags) && (
                 <div className="flex flex-wrap gap-2">

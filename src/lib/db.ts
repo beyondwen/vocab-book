@@ -97,6 +97,7 @@ export interface ContentItem {
   format: 'plain' | 'markdown';
   source: string | null;
   note: string | null;
+  note_format: 'plain' | 'markdown';
   tags: string | null;
   created_at: string;
   updated_at: string;

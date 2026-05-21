@@ -83,6 +83,9 @@ export async function PUT(
     const body = await request.json();
     const nextBody = body.body !== undefined ? normalizeContentBody(body.body) : existing.body;
     const nextFormat = body.format !== undefined ? normalizeContentFormat(body.format) : existing.format;
+    const nextNoteFormat = body.note_format !== undefined
+      ? normalizeContentFormat(body.note_format, '备注格式')
+      : existing.note_format;
     const nextTags = body.tags !== undefined ? parseTags(body.tags) : null;
     const nextWordIds = body.word_ids !== undefined ? normalizeWordIds(body.word_ids) : null;
 
@@ -99,6 +102,7 @@ export async function PUT(
         format = ?,
         source = ?,
         note = ?,
+        note_format = ?,
         tags = ?,
         updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
@@ -107,6 +111,7 @@ export async function PUT(
         nextFormat,
         body.source !== undefined ? String(body.source).trim() || null : existing.source,
         body.note !== undefined ? String(body.note).trim() || null : existing.note,
+        nextNoteFormat,
         nextTags ? (nextTags.length > 0 ? JSON.stringify(nextTags) : null) : existing.tags,
         contentId,
       ],
@@ -125,7 +130,10 @@ export async function PUT(
     const updatedContent = await fetchContentWithWords(contentId);
     return NextResponse.json({ success: true, data: updatedContent });
   } catch (error) {
-    if (error instanceof Error && error.message === '内容正文不能为空') {
+    if (
+      error instanceof Error
+      && ['内容正文不能为空', '内容格式只支持 plain 或 markdown', '备注格式只支持 plain 或 markdown'].includes(error.message)
+    ) {
       return NextResponse.json(
         { success: false, error: { code: 'VALIDATION_ERROR', message: error.message } },
         { status: 400 },

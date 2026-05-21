@@ -24,6 +24,7 @@ export default function NewContentPage() {
     format: 'plain' as ContentFormat,
     source: '',
     note: '',
+    note_format: 'markdown' as ContentFormat,
     tags: '',
   });
 
@@ -149,12 +150,31 @@ export default function NewContentPage() {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">备注</label>
+            <div className="mb-2 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 text-sm">
+              {[
+                { value: 'plain' as ContentFormat, label: '纯文本' },
+                { value: 'markdown' as ContentFormat, label: 'Markdown' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setForm({ ...form, note_format: option.value })}
+                  className={`rounded-md px-3 py-1.5 font-medium transition ${
+                    form.note_format === option.value
+                      ? 'bg-white text-indigo-700 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
             <textarea
               value={form.note}
               onChange={(event) => setForm({ ...form, note: event.target.value })}
               rows={3}
               className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              placeholder="记录为什么收藏这段内容"
+              placeholder={form.note_format === 'markdown' ? '支持 Markdown 备注，例如错误分析、表格、引用' : '记录为什么收藏这段内容'}
             />
           </div>
 

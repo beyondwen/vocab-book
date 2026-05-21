@@ -44,9 +44,15 @@ export function normalizeContentId(value) {
   return id;
 }
 
-export function normalizeContentFormat(value) {
+export function normalizeContentFormat(value, fieldLabel = '内容格式') {
   const format = typeof value === 'string' ? value.trim().toLowerCase() : '';
-  return format === 'markdown' ? 'markdown' : 'plain';
+  if (!format) {
+    return 'plain';
+  }
+  if (format === 'plain' || format === 'markdown') {
+    return format;
+  }
+  throw new Error(`${fieldLabel}只支持 plain 或 markdown`);
 }
 
 export function normalizeContentPayload(value) {
@@ -54,9 +60,10 @@ export function normalizeContentPayload(value) {
 
   return {
     body: normalizeContentBody(payload.body),
-    format: normalizeContentFormat(payload.format),
+    format: normalizeContentFormat(payload.format, '内容格式'),
     source: payload.source ? String(payload.source).trim() : null,
     note: payload.note ? String(payload.note).trim() : null,
+    noteFormat: normalizeContentFormat(payload.note_format, '备注格式'),
     tags: parseTags(payload.tags),
     wordIds: normalizeWordIds(payload.word_ids),
   };

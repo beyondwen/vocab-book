@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS content_items (
   format TEXT DEFAULT 'plain' CHECK(format IN ('plain', 'markdown')),
   source TEXT,
   note TEXT,
+  note_format TEXT DEFAULT 'plain' CHECK(note_format IN ('plain', 'markdown')),
   tags TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

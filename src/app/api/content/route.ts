@@ -104,12 +104,13 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await dbRun(
-      'INSERT INTO content_items (body, format, source, note, tags) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO content_items (body, format, source, note, note_format, tags) VALUES (?, ?, ?, ?, ?, ?)',
       [
         payload.body,
         payload.format,
         payload.source,
         payload.note,
+        payload.noteFormat,
         payload.tags.length > 0 ? JSON.stringify(payload.tags) : null,
       ],
     );
@@ -129,7 +130,10 @@ export async function POST(request: NextRequest) {
     const newContent = await fetchContentWithWords(contentId);
     return NextResponse.json({ success: true, data: newContent }, { status: 201 });
   } catch (error) {
-    if (error instanceof Error && error.message === '内容正文不能为空') {
+    if (
+      error instanceof Error
+      && ['内容正文不能为空', '内容格式只支持 plain 或 markdown', '备注格式只支持 plain 或 markdown'].includes(error.message)
+    ) {
       return NextResponse.json(
         { success: false, error: { code: 'VALIDATION_ERROR', message: error.message } },
         { status: 400 },
