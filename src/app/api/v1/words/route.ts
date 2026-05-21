@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     const countQuery = query.replace('SELECT id, word, phonetic, meaning, example, tags, status, created_at', 'SELECT COUNT(*) as total');
     const { total } = await dbGet<{ total: number }>(countQuery, params) || { total: 0 };
 
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    query += ' ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?';
     params.push(limit, (page - 1) * limit);
 
     const words = await dbAll(query, params);

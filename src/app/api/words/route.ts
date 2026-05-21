@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
        LEFT JOIN content_word_links cwl ON cwl.word_id = w.id
        ${whereSql}
        GROUP BY w.id
-       ORDER BY w.created_at DESC
+       ORDER BY w.created_at DESC, w.id DESC
        LIMIT ? OFFSET ?`,
       [...params, limit, (page - 1) * limit],
     );
