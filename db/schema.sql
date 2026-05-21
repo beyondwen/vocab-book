@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS review_records (
 CREATE TABLE IF NOT EXISTS content_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   body TEXT NOT NULL,
+  format TEXT DEFAULT 'plain' CHECK(format IN ('plain', 'markdown')),
   source TEXT,
   note TEXT,
   tags TEXT,

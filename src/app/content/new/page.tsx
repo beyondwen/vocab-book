@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Link as LinkIcon, Plus, Search, X } from 'lucide-react';
 import { getAdminHeaders } from '@/lib/admin-client';
+import { type ContentFormat } from '@/app/components/ContentBody';
 
 interface WordOption {
   id: number;
@@ -20,6 +21,7 @@ export default function NewContentPage() {
   const [selectedWords, setSelectedWords] = useState<WordOption[]>([]);
   const [form, setForm] = useState({
     body: '',
+    format: 'plain' as ContentFormat,
     source: '',
     note: '',
     tags: '',
@@ -95,13 +97,32 @@ export default function NewContentPage() {
             <label className="mb-1 block text-sm font-medium text-gray-700">
               内容正文 <span className="text-red-500">*</span>
             </label>
+            <div className="mb-2 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 text-sm">
+              {[
+                { value: 'plain' as ContentFormat, label: '纯文本' },
+                { value: 'markdown' as ContentFormat, label: 'Markdown' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setForm({ ...form, format: option.value })}
+                  className={`rounded-md px-3 py-1.5 font-medium transition ${
+                    form.format === option.value
+                      ? 'bg-white text-indigo-700 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
             <textarea
               value={form.body}
               onChange={(event) => setForm({ ...form, body: event.target.value })}
               required
               rows={8}
               className="w-full rounded-lg border border-gray-200 px-4 py-3 leading-6 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              placeholder="粘贴句子、段落或摘录"
+              placeholder={form.format === 'markdown' ? '支持标题、列表、引用、表格和代码块' : '粘贴句子、段落或摘录'}
             />
           </div>
 

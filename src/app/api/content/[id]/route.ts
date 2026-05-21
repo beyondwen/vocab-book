@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ContentItem, dbAll, dbGet, dbRun, Word } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
-import { normalizeContentBody, normalizeWordIds, parseTags } from '@/lib/content-utils.js';
+import { normalizeContentBody, normalizeContentFormat, normalizeWordIds, parseTags } from '@/lib/content-utils.js';
 
 async function fetchContentWithWords(id: number) {
   const content = await dbGet<ContentItem>('SELECT * FROM content_items WHERE id = ?', [id]);
@@ -82,6 +82,7 @@ export async function PUT(
 
     const body = await request.json();
     const nextBody = body.body !== undefined ? normalizeContentBody(body.body) : existing.body;
+    const nextFormat = body.format !== undefined ? normalizeContentFormat(body.format) : existing.format;
     const nextTags = body.tags !== undefined ? parseTags(body.tags) : null;
     const nextWordIds = body.word_ids !== undefined ? normalizeWordIds(body.word_ids) : null;
 
@@ -95,6 +96,7 @@ export async function PUT(
     await dbRun(
       `UPDATE content_items SET
         body = ?,
+        format = ?,
         source = ?,
         note = ?,
         tags = ?,
@@ -102,6 +104,7 @@ export async function PUT(
        WHERE id = ?`,
       [
         nextBody,
+        nextFormat,
         body.source !== undefined ? String(body.source).trim() || null : existing.source,
         body.note !== undefined ? String(body.note).trim() || null : existing.note,
         nextTags ? (nextTags.length > 0 ? JSON.stringify(nextTags) : null) : existing.tags,

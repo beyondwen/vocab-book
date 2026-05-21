@@ -25,6 +25,7 @@ interface Stats {
 interface RecentContent {
   id: number;
   body: string;
+  format: 'plain' | 'markdown';
   source: string | null;
   word_count: number;
   created_at: string;
@@ -197,6 +198,7 @@ export default function Home() {
                 <p className="line-clamp-2 text-sm leading-6 text-gray-900">{item.body}</p>
                 <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
                   {item.source && <span>{item.source}</span>}
+                  {item.format === 'markdown' && <span>Markdown</span>}
                   <span>{item.word_count} 个关联单词</span>
                 </div>
               </Link>

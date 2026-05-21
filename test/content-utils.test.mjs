@@ -5,6 +5,7 @@ import {
   normalizeContentPayload,
   normalizeContentBody,
   normalizeContentId,
+  normalizeContentFormat,
   normalizeWordIds,
   parseTags,
 } from '../src/lib/content-utils.js';
@@ -34,6 +35,13 @@ test('normalizeContentId accepts positive integer ids only', () => {
   assert.throws(() => normalizeContentId('abc'), /内容 ID 无效/);
 });
 
+test('normalizeContentFormat supports plain and markdown', () => {
+  assert.equal(normalizeContentFormat('markdown'), 'markdown');
+  assert.equal(normalizeContentFormat(' plain '), 'plain');
+  assert.equal(normalizeContentFormat(undefined), 'plain');
+  assert.equal(normalizeContentFormat('html'), 'plain');
+});
+
 test('normalizeContentPayload prepares external API content payload', () => {
   assert.deepEqual(
     normalizeContentPayload({
@@ -42,6 +50,7 @@ test('normalizeContentPayload prepares external API content payload', () => {
       note: '  useful sentence  ',
       tags: '阅读, 例句, 阅读',
       word_ids: [1, '2', 1],
+      format: 'markdown',
     }),
     {
       body: 'Fame is ephemeral.',
@@ -49,6 +58,7 @@ test('normalizeContentPayload prepares external API content payload', () => {
       note: 'useful sentence',
       tags: ['阅读', '例句'],
       wordIds: [1, 2],
+      format: 'markdown',
     },
   );
 });

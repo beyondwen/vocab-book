@@ -5,7 +5,7 @@
 ## 功能特性
 
 - 📝 **单词管理** - 手动录入、批量导入、分组管理
-- 🧩 **内容库** - 保存句子、短段落和摘录，并关联到单词
+- 🧩 **内容库** - 保存句子、短段落和摘录，支持纯文本/Markdown，并关联到单词
 - 🔄 **艾宾浩斯复习** - 基于 SM-2 算法的间隔重复
 - ✍️ **测试模式** - 选择题、拼写测试
 - 📊 **学习统计** - 掌握率、学习趋势、复习日历
@@ -120,6 +120,34 @@ X-API-Key: vb_xxx...
 | POST | /api/v1/content/batch | 第三方批量添加内容 |
 
 内部页面使用的 `/api/words`、`/api/review`、`/api/stats`、`/api/import`、`/api/settings/api-keys` 在生产环境需要管理令牌。
+
+### 第三方内容字段
+
+`POST /api/v1/content` 和 `POST /api/v1/content/batch` 支持以下内容字段：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| body | string | 是 | 句子、段落或摘录正文 |
+| format | plain \| markdown | 否 | 正文格式，默认 `plain`；传 `markdown` 时会按 Markdown 安全渲染 |
+| source | string | 否 | 来源，例如书名、文章、视频或网址 |
+| note | string | 否 | 备注 |
+| tags | string[] 或 string | 否 | 标签数组，或逗号分隔字符串 |
+| word_ids | number[] | 否 | 要关联的已有单词 ID |
+
+示例：
+
+```bash
+curl -X POST https://vocab-book.beyondlenovo.workers.dev/api/v1/content \
+  -H "Authorization: Bearer vb_xxx..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "body": "## Fame is ephemeral.\n\n- ephemeral: 短暂的\n- usable in writing",
+    "format": "markdown",
+    "source": "reading note",
+    "tags": ["阅读", "例句"],
+    "word_ids": [1]
+  }'
+```
 
 ## 许可证
 

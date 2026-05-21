@@ -46,8 +46,8 @@ const endpoints = [
     method: 'POST',
     path: '/api/v1/content',
     title: '添加内容',
-    description: '添加一条句子或短内容，可关联已有单词。',
-    params: 'body、source、note、tags、word_ids',
+    description: '添加一条句子或短内容，可选择纯文本或 Markdown，并关联已有单词。',
+    params: 'body、format、source、note、tags、word_ids',
   },
   {
     method: 'POST',
@@ -75,6 +75,7 @@ const fieldRows = [
 
 const contentFieldRows = [
   ['body', 'string', '是', '句子、段落或摘录正文'],
+  ['format', '"plain" | "markdown"', '否', '正文格式，默认 plain；markdown 会安全渲染标题、列表、引用、表格和代码块'],
   ['source', 'string', '否', '来源，例如书名、文章、视频或网址'],
   ['note', 'string', '否', '备注，例如收藏原因或用法说明'],
   ['tags', 'string[] 或 string', '否', '标签数组，或用逗号分隔的字符串'],
@@ -188,7 +189,8 @@ X-API-Key: vb_xxx...`;
   -H "Authorization: Bearer vb_xxx..." \\
   -H "Content-Type: application/json" \\
   -d '{
-    "body": "Fame is ephemeral.",
+    "body": "## Fame is ephemeral.\\n\\n- ephemeral: 短暂的\\n- usable in writing",
+    "format": "markdown",
     "source": "reading note",
     "note": "用来记 ephemeral",
     "tags": ["阅读", "例句"],
@@ -202,7 +204,7 @@ X-API-Key: vb_xxx...`;
   -d '{
     "contents": [
       { "body": "Fame is ephemeral.", "tags": ["阅读"] },
-      { "body": "Serendipity often rewards curiosity.", "source": "note" }
+      { "body": "### Serendipity\\n\\nOften rewards curiosity.", "format": "markdown", "source": "note" }
     ]
   }'`;
   const deleteContentExample = `curl -X DELETE ${baseUrl}/api/v1/content/1 \\

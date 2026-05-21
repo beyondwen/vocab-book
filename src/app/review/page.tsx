@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAdminHeaders } from '@/lib/admin-client';
+import ContentBody from '@/app/components/ContentBody';
 
 interface Word {
   id: number;
@@ -13,6 +14,7 @@ interface Word {
   contents?: {
     id: number;
     body: string;
+    format: 'plain' | 'markdown';
     source: string | null;
   }[];
 }
@@ -150,7 +152,7 @@ export default function ReviewPage() {
                   <h3 className="text-sm font-semibold text-gray-500">相关语境</h3>
                   {currentWord.contents.map((content) => (
                     <div key={content.id} className="rounded-lg bg-gray-50 p-4">
-                      <p className="text-sm leading-6 text-gray-700">{content.body}</p>
+                      <ContentBody body={content.body} format={content.format} className="text-sm leading-6 text-gray-700" />
                       {content.source && (
                         <div className="mt-2 text-xs text-gray-400">来源：{content.source}</div>
                       )}

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Link as LinkIcon, Plus, Search, Trash2, X } from 'lucide-react';
 import { getAdminHeaders } from '@/lib/admin-client';
+import ContentBody, { type ContentFormat } from '@/app/components/ContentBody';
 
 interface WordOption {
   id: number;
@@ -16,6 +17,7 @@ interface WordOption {
 interface ContentDetail {
   id: number;
   body: string;
+  format: ContentFormat;
   source: string | null;
   note: string | null;
   tags: string | null;
@@ -46,6 +48,7 @@ export default function ContentDetailPage() {
   const [selectedWords, setSelectedWords] = useState<WordOption[]>([]);
   const [form, setForm] = useState({
     body: '',
+    format: 'plain' as ContentFormat,
     source: '',
     note: '',
     tags: '',
@@ -61,6 +64,7 @@ export default function ContentDetailPage() {
         setSelectedWords(data.data.words || []);
         setForm({
           body: data.data.body,
+          format: data.data.format || 'plain',
           source: data.data.source || '',
           note: data.data.note || '',
           tags: tagsToInput(data.data.tags),
@@ -213,6 +217,25 @@ export default function ContentDetailPage() {
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">内容正文</label>
+                <div className="mb-2 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 text-sm">
+                  {[
+                    { value: 'plain' as ContentFormat, label: '纯文本' },
+                    { value: 'markdown' as ContentFormat, label: 'Markdown' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setForm({ ...form, format: option.value })}
+                      className={`rounded-md px-3 py-1.5 font-medium transition ${
+                        form.format === option.value
+                          ? 'bg-white text-indigo-700 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-800'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
                 <textarea
                   value={form.body}
                   onChange={(event) => setForm({ ...form, body: event.target.value })}
@@ -250,8 +273,13 @@ export default function ContentDetailPage() {
             </div>
           ) : (
             <article className="space-y-5">
-              <p className="whitespace-pre-wrap text-lg leading-8 text-gray-950">{content.body}</p>
+              <ContentBody
+                body={content.body}
+                format={content.format}
+                className={content.format === 'markdown' ? 'text-base' : 'text-lg leading-8 text-gray-950'}
+              />
               <div className="flex flex-wrap gap-3 text-sm text-gray-500">
+                <span>{content.format === 'markdown' ? 'Markdown' : '纯文本'}</span>
                 {content.source && <span>来源：{content.source}</span>}
                 <span>创建：{new Date(content.created_at).toLocaleString('zh-CN')}</span>
               </div>

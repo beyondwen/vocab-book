@@ -8,6 +8,7 @@ import { getAdminHeaders } from '@/lib/admin-client';
 interface ContentItem {
   id: number;
   body: string;
+  format: 'plain' | 'markdown';
   source: string | null;
   note: string | null;
   tags: string | null;
@@ -111,6 +112,7 @@ export default function ContentPage() {
                   <p className="line-clamp-3 text-sm leading-6 text-gray-900">{item.body}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                     {item.source && <span>来源：{item.source}</span>}
+                    {item.format === 'markdown' && <span>Markdown</span>}
                     <span>{item.word_count} 个关联单词</span>
                     <span>{new Date(item.created_at).toLocaleDateString('zh-CN')}</span>
                   </div>

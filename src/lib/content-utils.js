@@ -44,11 +44,17 @@ export function normalizeContentId(value) {
   return id;
 }
 
+export function normalizeContentFormat(value) {
+  const format = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return format === 'markdown' ? 'markdown' : 'plain';
+}
+
 export function normalizeContentPayload(value) {
   const payload = value && typeof value === 'object' ? value : {};
 
   return {
     body: normalizeContentBody(payload.body),
+    format: normalizeContentFormat(payload.format),
     source: payload.source ? String(payload.source).trim() : null,
     note: payload.note ? String(payload.note).trim() : null,
     tags: parseTags(payload.tags),

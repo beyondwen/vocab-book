@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ContentItem, ContentItemWithWordCount, dbAll, dbGet, dbRun, SqlParam, Word } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
-import { normalizeContentBody, normalizeWordIds, parseTags } from '@/lib/content-utils.js';
+import { normalizeContentPayload } from '@/lib/content-utils.js';
 
 async function validateWordIds(wordIds: number[]) {
   if (wordIds.length === 0) {
@@ -94,12 +94,9 @@ export async function POST(request: NextRequest) {
     const authError = await requireAdmin(request);
     if (authError) return authError;
 
-    const body = await request.json();
-    const contentBody = normalizeContentBody(body.body);
-    const tags = parseTags(body.tags);
-    const wordIds = normalizeWordIds(body.word_ids);
+    const payload = normalizeContentPayload(await request.json());
 
-    if (!(await validateWordIds(wordIds))) {
+    if (!(await validateWordIds(payload.wordIds))) {
       return NextResponse.json(
         { success: false, error: { code: 'VALIDATION_ERROR', message: '关联单词不存在' } },
         { status: 400 },
@@ -107,12 +104,13 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await dbRun(
-      'INSERT INTO content_items (body, source, note, tags) VALUES (?, ?, ?, ?)',
+      'INSERT INTO content_items (body, format, source, note, tags) VALUES (?, ?, ?, ?, ?)',
       [
-        contentBody,
-        body.source ? String(body.source).trim() : null,
-        body.note ? String(body.note).trim() : null,
-        tags.length > 0 ? JSON.stringify(tags) : null,
+        payload.body,
+        payload.format,
+        payload.source,
+        payload.note,
+        payload.tags.length > 0 ? JSON.stringify(payload.tags) : null,
       ],
     );
 
@@ -121,7 +119,7 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to create content');
     }
 
-    for (const wordId of wordIds) {
+    for (const wordId of payload.wordIds) {
       await dbRun(
         'INSERT OR IGNORE INTO content_word_links (content_id, word_id) VALUES (?, ?)',
         [contentId, wordId],

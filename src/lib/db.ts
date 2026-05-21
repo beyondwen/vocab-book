@@ -94,6 +94,7 @@ export interface Wordbook {
 export interface ContentItem {
   id: number;
   body: string;
+  format: 'plain' | 'markdown';
   source: string | null;
   note: string | null;
   tags: string | null;

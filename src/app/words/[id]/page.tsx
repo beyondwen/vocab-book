@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getAdminHeaders } from '@/lib/admin-client';
+import ContentBody from '@/app/components/ContentBody';
 
 interface ReviewHistory {
   id: number;
@@ -31,6 +32,7 @@ interface Word {
 interface ContentItem {
   id: number;
   body: string;
+  format: 'plain' | 'markdown';
   source: string | null;
   note: string | null;
   tags: string | null;
@@ -297,8 +299,9 @@ export default function WordDetailPage() {
           <div className="space-y-3">
             {word.contents.map((content) => (
               <div key={content.id} className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                <p className="whitespace-pre-wrap text-sm leading-6 text-gray-800">{content.body}</p>
+                <ContentBody body={content.body} format={content.format} className="text-sm leading-6 text-gray-800" />
                 <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
+                  {content.format === 'markdown' && <span>Markdown</span>}
                   {content.source && <span>来源：{content.source}</span>}
                   <span>{new Date(content.created_at).toLocaleDateString('zh-CN')}</span>
                 </div>
