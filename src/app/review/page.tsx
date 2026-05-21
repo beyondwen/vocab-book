@@ -10,6 +10,11 @@ interface Word {
   phonetic: string | null;
   meaning: string;
   example: string | null;
+  contents?: {
+    id: number;
+    body: string;
+    source: string | null;
+  }[];
 }
 
 export default function ReviewPage() {
@@ -139,6 +144,19 @@ export default function ReviewPage() {
                 <p className="text-gray-500 italic">
                   {currentWord.example}
                 </p>
+              )}
+              {currentWord.contents && currentWord.contents.length > 0 && (
+                <div className="mt-5 space-y-3 text-left">
+                  <h3 className="text-sm font-semibold text-gray-500">相关语境</h3>
+                  {currentWord.contents.map((content) => (
+                    <div key={content.id} className="rounded-lg bg-gray-50 p-4">
+                      <p className="text-sm leading-6 text-gray-700">{content.body}</p>
+                      {content.source && (
+                        <div className="mt-2 text-xs text-gray-400">来源：{content.source}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           ) : (

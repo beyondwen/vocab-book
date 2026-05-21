@@ -35,7 +35,7 @@ export default function NewWordPage() {
 
       const data = await res.json();
       if (data.success) {
-        router.push('/words');
+        router.push(`/words/${data.data.id}`);
         router.refresh();
       } else {
         alert(data.error?.message || '添加失败');

@@ -25,6 +25,16 @@ interface Word {
   status: string;
   created_at: string;
   reviews: ReviewHistory[];
+  contents: ContentItem[];
+}
+
+interface ContentItem {
+  id: number;
+  body: string;
+  source: string | null;
+  note: string | null;
+  tags: string | null;
+  created_at: string;
 }
 
 export default function WordDetailPage() {
@@ -281,6 +291,23 @@ export default function WordDetailPage() {
       </div>
 
       {/* 复习历史 */}
+      {word.contents && word.contents.length > 0 && (
+        <div className="bg-white rounded-xl p-6 shadow-sm border mb-6">
+          <h2 className="text-lg font-semibold mb-4">相关语境</h2>
+          <div className="space-y-3">
+            {word.contents.map((content) => (
+              <div key={content.id} className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                <p className="whitespace-pre-wrap text-sm leading-6 text-gray-800">{content.body}</p>
+                <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
+                  {content.source && <span>来源：{content.source}</span>}
+                  <span>{new Date(content.created_at).toLocaleDateString('zh-CN')}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {word.reviews && word.reviews.length > 0 && (
         <div className="bg-white rounded-xl p-6 shadow-sm border">
           <h2 className="text-lg font-semibold mb-4">复习历史</h2>

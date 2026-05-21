@@ -35,6 +35,34 @@ const endpoints = [
     description: '一次最多导入 100 个单词，重复项会跳过并计入 duplicates。',
     params: 'words[]',
   },
+  {
+    method: 'GET',
+    path: '/api/v1/content',
+    title: '查询内容',
+    description: '按分页读取句子和摘录，也可以用 search 搜索正文、来源或备注。',
+    params: 'page、limit、search',
+  },
+  {
+    method: 'POST',
+    path: '/api/v1/content',
+    title: '添加内容',
+    description: '添加一条句子或短内容，可关联已有单词。',
+    params: 'body、source、note、tags、word_ids',
+  },
+  {
+    method: 'POST',
+    path: '/api/v1/content/batch',
+    title: '批量添加内容',
+    description: '一次最多导入 100 条内容，逐条返回成功和失败统计。',
+    params: 'contents[]',
+  },
+  {
+    method: 'DELETE',
+    path: '/api/v1/content/:id',
+    title: '删除内容',
+    description: '删除一条内容和它的单词关联，不删除单词本身。',
+    params: 'id',
+  },
 ];
 
 const fieldRows = [
@@ -43,6 +71,14 @@ const fieldRows = [
   ['phonetic', 'string', '否', '音标，例如 /ɪˈfemərəl/'],
   ['example', 'string', '否', '例句，例如 Fame is ephemeral.'],
   ['tags', 'string[]', '否', '标签数组，例如 ["GRE", "阅读"]'],
+];
+
+const contentFieldRows = [
+  ['body', 'string', '是', '句子、段落或摘录正文'],
+  ['source', 'string', '否', '来源，例如书名、文章、视频或网址'],
+  ['note', 'string', '否', '备注，例如收藏原因或用法说明'],
+  ['tags', 'string[] 或 string', '否', '标签数组，或用逗号分隔的字符串'],
+  ['word_ids', 'number[]', '否', '要关联的已有单词 ID 数组'],
 ];
 
 const errorRows = [
@@ -148,6 +184,29 @@ X-API-Key: vb_xxx...`;
       { "word": "serendipity", "meaning": "意外发现的好运" }
     ]
   }'`;
+  const createContentExample = `curl -X POST ${baseUrl}/api/v1/content \\
+  -H "Authorization: Bearer vb_xxx..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "body": "Fame is ephemeral.",
+    "source": "reading note",
+    "note": "用来记 ephemeral",
+    "tags": ["阅读", "例句"],
+    "word_ids": [1]
+  }'`;
+  const queryContentExample = `curl "${baseUrl}/api/v1/content?page=1&limit=20&search=ephemeral" \\
+  -H "Authorization: Bearer vb_xxx..."`;
+  const batchContentExample = `curl -X POST ${baseUrl}/api/v1/content/batch \\
+  -H "Authorization: Bearer vb_xxx..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "contents": [
+      { "body": "Fame is ephemeral.", "tags": ["阅读"] },
+      { "body": "Serendipity often rewards curiosity.", "source": "note" }
+    ]
+  }'`;
+  const deleteContentExample = `curl -X DELETE ${baseUrl}/api/v1/content/1 \\
+  -H "Authorization: Bearer vb_xxx..."`;
   const responseExample = `{
   "success": true,
   "data": {
@@ -173,7 +232,7 @@ X-API-Key: vb_xxx...`;
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {endpoints.map((endpoint) => (
           <div key={endpoint.path + endpoint.method} className="bg-white rounded-xl p-5 shadow-sm border">
             <div className="flex items-center gap-2 mb-3">
@@ -237,7 +296,7 @@ X-API-Key: vb_xxx...`;
         </section>
 
         <section className="bg-white rounded-xl p-6 shadow-sm border">
-          <h2 className="text-lg font-semibold mb-4">字段说明</h2>
+          <h2 className="text-lg font-semibold mb-4">单词字段</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -263,12 +322,42 @@ X-API-Key: vb_xxx...`;
         </section>
       </div>
 
+      <section className="bg-white rounded-xl p-6 shadow-sm border">
+        <h2 className="text-lg font-semibold mb-4">内容字段</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b">
+                <th className="py-2 pr-4">字段</th>
+                <th className="py-2 pr-4">类型</th>
+                <th className="py-2 pr-4">必填</th>
+                <th className="py-2">说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              {contentFieldRows.map(([field, type, required, description]) => (
+                <tr key={field} className="border-b last:border-0">
+                  <td className="py-3 pr-4 font-mono text-gray-900">{field}</td>
+                  <td className="py-3 pr-4 text-gray-600">{type}</td>
+                  <td className="py-3 pr-4 text-gray-600">{required}</td>
+                  <td className="py-3 text-gray-500">{description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section className="bg-white rounded-xl p-6 shadow-sm border space-y-5">
         <h2 className="text-lg font-semibold">调用示例</h2>
         <div className="grid gap-5 lg:grid-cols-2">
           <ExampleCard title="添加单词" code={createExample} onCopy={copyToClipboard} />
           <ExampleCard title="查询单词" code={queryExample} onCopy={copyToClipboard} />
           <ExampleCard title="批量添加" code={batchExample} onCopy={copyToClipboard} />
+          <ExampleCard title="添加内容" code={createContentExample} onCopy={copyToClipboard} />
+          <ExampleCard title="查询内容" code={queryContentExample} onCopy={copyToClipboard} />
+          <ExampleCard title="批量添加内容" code={batchContentExample} onCopy={copyToClipboard} />
+          <ExampleCard title="删除内容" code={deleteContentExample} onCopy={copyToClipboard} />
           <ExampleCard title="成功响应" code={responseExample} onCopy={copyToClipboard} />
         </div>
       </section>

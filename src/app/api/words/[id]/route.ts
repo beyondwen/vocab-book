@@ -27,9 +27,19 @@ export async function GET(
       [id]
     );
 
+    const contents = await dbAll(
+      `SELECT ci.*
+       FROM content_word_links cwl
+       JOIN content_items ci ON ci.id = cwl.content_id
+       WHERE cwl.word_id = ?
+       ORDER BY cwl.created_at DESC
+       LIMIT 10`,
+      [id]
+    );
+
     return NextResponse.json({
       success: true,
-      data: { ...word, reviews },
+      data: { ...word, reviews, contents },
     });
   } catch (error) {
     console.error('Error fetching word:', error);

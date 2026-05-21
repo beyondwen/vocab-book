@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dbAll, dbGet, dbRun, SqlParam, Word } from '@/lib/db';
+import { dbAll, dbGet, dbRun, SqlParam, Word, WordWithContentCount } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
 
 // GET /api/words - 查询单词列表
@@ -15,33 +15,41 @@ export async function GET(request: NextRequest) {
     const wordbookId = searchParams.get('wordbook_id');
     const search = searchParams.get('search');
 
-    let query = 'SELECT * FROM words WHERE 1=1';
+    let whereSql = 'WHERE 1=1';
     const params: SqlParam[] = [];
 
     if (status) {
-      query += ' AND status = ?';
+      whereSql += ' AND w.status = ?';
       params.push(status);
     }
 
     if (wordbookId) {
-      query += ' AND wordbook_id = ?';
+      whereSql += ' AND w.wordbook_id = ?';
       params.push(parseInt(wordbookId));
     }
 
     if (search) {
-      query += ' AND (word LIKE ? OR meaning LIKE ?)';
+      whereSql += ' AND (w.word LIKE ? OR w.meaning LIKE ?)';
       params.push(`%${search}%`, `%${search}%`);
     }
 
     // 获取总数
-    const countQuery = query.replace('SELECT *', 'SELECT COUNT(*) as total');
-    const { total } = await dbGet<{ total: number }>(countQuery, params) || { total: 0 };
+    const { total } = await dbGet<{ total: number }>(
+      `SELECT COUNT(*) as total FROM words w ${whereSql}`,
+      params,
+    ) || { total: 0 };
 
     // 分页查询
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, (page - 1) * limit);
-
-    const words = await dbAll<Word>(query, params);
+    const words = await dbAll<WordWithContentCount>(
+      `SELECT w.*, COUNT(cwl.content_id) as content_count
+       FROM words w
+       LEFT JOIN content_word_links cwl ON cwl.word_id = w.id
+       ${whereSql}
+       GROUP BY w.id
+       ORDER BY w.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, (page - 1) * limit],
+    );
 
     return NextResponse.json({
       success: true,

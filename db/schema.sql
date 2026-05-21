@@ -38,6 +38,28 @@ CREATE TABLE IF NOT EXISTS review_records (
   FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE
 );
 
+-- 内容库：句子和短段落
+CREATE TABLE IF NOT EXISTS content_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  body TEXT NOT NULL,
+  source TEXT,
+  note TEXT,
+  tags TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 内容与单词的关联
+CREATE TABLE IF NOT EXISTS content_word_links (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  content_id INTEGER NOT NULL,
+  word_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (content_id) REFERENCES content_items(id) ON DELETE CASCADE,
+  FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE,
+  UNIQUE(content_id, word_id)
+);
+
 -- API Keys
 CREATE TABLE IF NOT EXISTS api_keys (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,4 +75,7 @@ CREATE INDEX IF NOT EXISTS idx_words_status ON words(status);
 CREATE INDEX IF NOT EXISTS idx_words_wordbook ON words(wordbook_id);
 CREATE INDEX IF NOT EXISTS idx_review_word ON review_records(word_id);
 CREATE INDEX IF NOT EXISTS idx_review_next_date ON review_records(next_review_date);
+CREATE INDEX IF NOT EXISTS idx_content_items_created_at ON content_items(created_at);
+CREATE INDEX IF NOT EXISTS idx_content_word_links_content ON content_word_links(content_id);
+CREATE INDEX IF NOT EXISTS idx_content_word_links_word ON content_word_links(word_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);

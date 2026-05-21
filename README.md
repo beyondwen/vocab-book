@@ -5,6 +5,7 @@
 ## 功能特性
 
 - 📝 **单词管理** - 手动录入、批量导入、分组管理
+- 🧩 **内容库** - 保存句子、短段落和摘录，并关联到单词
 - 🔄 **艾宾浩斯复习** - 基于 SM-2 算法的间隔重复
 - ✍️ **测试模式** - 选择题、拼写测试
 - 📊 **学习统计** - 掌握率、学习趋势、复习日历
@@ -68,6 +69,7 @@ vocab-book/
 │   ├── app/
 │   │   ├── api/          # API 路由
 │   │   ├── words/        # 单词管理页面
+│   │   ├── content/      # 内容库页面
 │   │   ├── review/       # 复习页面
 │   │   ├── quiz/         # 测试页面
 │   │   ├── stats/        # 统计页面
@@ -100,12 +102,22 @@ X-API-Key: vb_xxx...
 | GET | /api/words/:id | 获取单词详情 |
 | PUT | /api/words/:id | 更新单词 |
 | DELETE | /api/words/:id | 删除单词 |
+| GET | /api/content | 查询内容列表 |
+| POST | /api/content | 添加内容 |
+| GET | /api/content/:id | 获取内容详情 |
+| PUT | /api/content/:id | 更新内容 |
+| DELETE | /api/content/:id | 删除内容 |
 | GET | /api/review | 获取待复习单词 |
 | POST | /api/review | 提交复习结果 |
 | GET | /api/stats | 获取学习统计 |
 | POST | /api/import | 批量导入 |
 | POST | /api/v1/words | 第三方添加单词 |
 | POST | /api/v1/words/batch | 第三方批量添加 |
+| GET | /api/v1/content | 第三方查询内容 |
+| POST | /api/v1/content | 第三方添加内容 |
+| GET | /api/v1/content/:id | 第三方获取内容详情 |
+| DELETE | /api/v1/content/:id | 第三方删除内容 |
+| POST | /api/v1/content/batch | 第三方批量添加内容 |
 
 内部页面使用的 `/api/words`、`/api/review`、`/api/stats`、`/api/import`、`/api/settings/api-keys` 在生产环境需要管理令牌。
 

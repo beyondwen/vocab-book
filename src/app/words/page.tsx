@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { FileText, Plus } from 'lucide-react';
 import { getAdminHeaders } from '@/lib/admin-client';
 
 interface Word {
@@ -12,6 +13,7 @@ interface Word {
   example: string | null;
   tags: string | null;
   status: string;
+  content_count: number;
   created_at: string;
 }
 
@@ -78,12 +80,16 @@ export default function WordsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">单词列表</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-950">单词列表</h1>
+          <p className="mt-1 text-sm text-gray-500">管理释义、状态和真实语境。</p>
+        </div>
         <Link
           href="/words/new"
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
         >
-          + 添加单词
+          <Plus size={18} />
+          添加单词
         </Link>
       </div>
 
@@ -119,7 +125,7 @@ export default function WordsPage() {
         {words.map((word) => (
           <div
             key={word.id}
-            className="bg-white rounded-xl p-4 shadow-sm border hover:shadow-md transition-shadow"
+            className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:border-indigo-200 hover:shadow-md transition"
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -143,9 +149,12 @@ export default function WordsPage() {
                     {word.example}
                   </div>
                 )}
-                {word.tags && (
-                  <div className="mt-2 flex gap-2">
-                    {JSON.parse(word.tags).map((tag: string, i: number) => (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700">
+                    <FileText size={13} />
+                    {word.content_count || 0} 条语境
+                  </span>
+                  {word.tags && JSON.parse(word.tags).map((tag: string, i: number) => (
                       <span
                         key={i}
                         className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
@@ -153,8 +162,7 @@ export default function WordsPage() {
                         {tag}
                       </span>
                     ))}
-                  </div>
-                )}
+                </div>
               </div>
               <div className="flex gap-2">
                 <Link

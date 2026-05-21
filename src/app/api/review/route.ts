@@ -30,11 +30,26 @@ export async function GET(request: NextRequest) {
       LIMIT 20
     `, [today]);
 
+    const wordsWithContents = await Promise.all(
+      wordsToReview.map(async (word) => {
+        const contents = await dbAll(
+          `SELECT ci.*
+           FROM content_word_links cwl
+           JOIN content_items ci ON ci.id = cwl.content_id
+           WHERE cwl.word_id = ?
+           ORDER BY cwl.created_at DESC
+           LIMIT 2`,
+          [word.id],
+        );
+        return { ...word, contents };
+      }),
+    );
+
     return NextResponse.json({
       success: true,
       data: {
-        words: wordsToReview,
-        count: wordsToReview.length,
+        words: wordsWithContents,
+        count: wordsWithContents.length,
       },
     });
   } catch (error) {

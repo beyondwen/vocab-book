@@ -67,6 +67,10 @@ export interface Word {
   updated_at: string;
 }
 
+export interface WordWithContentCount extends Word {
+  content_count: number;
+}
+
 export interface ReviewRecord {
   id: number;
   word_id: number;
@@ -84,6 +88,27 @@ export interface Wordbook {
   name: string;
   description: string | null;
   word_count: number;
+  created_at: string;
+}
+
+export interface ContentItem {
+  id: number;
+  body: string;
+  source: string | null;
+  note: string | null;
+  tags: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContentItemWithWordCount extends ContentItem {
+  word_count: number;
+}
+
+export interface ContentWordLink {
+  id: number;
+  content_id: number;
+  word_id: number;
   created_at: string;
 }
 
